@@ -2,7 +2,7 @@
 
 ## Installation
 
-clj.rb is published to [Clojars](http://clojars.org). To use from lein/boot:
+clj.rb is published to [Clojars](https://clojars.org/clj.rb). To use from lein/boot:
 
     [clj.rb "0.1.0"]
 

@@ -7,13 +7,16 @@
 (def +version+ "0.1.0")
 
 (task-options!
-  pom [:project 'clj.rb
-       :version +version+
-       :description "Utils for using JRuby from Clojure"
-       :url "https://github.com/tobias/clj.rb"
-       :scm {:url "https://github.com/tobias/clj.rb"}
-       :license {:name "Apache Software License - v 2.0"
-                 :url "http://www.apache.org/licenses/LICENSE-2.0"}])
+  pom  [:project 'clj.rb
+        :version +version+
+        :description "Utils for using JRuby from Clojure"
+        :url "https://github.com/tobias/clj.rb"
+        :scm {:url "https://github.com/tobias/clj.rb"}
+        :license {:name "Apache Software License - v 2.0"
+                  :url "http://www.apache.org/licenses/LICENSE-2.0"}]
+  push [:gpg-sign true
+        :gpg-user-id "toby@tcrawley.org"
+        :repo "clojars"])
 
 (deftask build
   "Build and install the artifact."
