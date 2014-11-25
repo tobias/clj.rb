@@ -18,6 +18,16 @@ From maven:
 
 Coming soon.
 
+## Development
+
+Install [boot](http://boot-clj.com), then call:
+
+    $ boot build
+
+run tests with:
+
+    $ boot test
+
 ## License
 
 Immutant is licensed under the Apache License, v2. See
