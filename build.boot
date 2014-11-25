@@ -12,8 +12,8 @@
        :description "Utils for using JRuby from Clojure"
        :url "https://github.com/tobias/clj.rb"
        :scm {:url "https://github.com/tobias/clj.rb"}
-       :license {:name "Eclipse Public License"
-                 :url "http://www.eclipse.org/legal/epl-v10.html"}])
+       :license {:name "Apache Software License - v 2.0"
+                 :url "http://www.apache.org/licenses/LICENSE-2.0"}])
 
 (deftask build
   "Build and install the artifact."
