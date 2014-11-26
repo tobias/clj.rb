@@ -121,7 +121,7 @@
   * :env - a map of values to set in the ruby ENV [nil]
   * :gem-paths - a sequence of paths to search for gems [nil]"
   ([] (runtime nil))
-  ([{:keys [preserve-locals? gem-path load-paths env]}]
+  ([{:keys [preserve-locals? gem-paths load-paths env]}]
      (let [rt (ScriptingContainer. (if preserve-locals?
                                      LocalVariableBehavior/PERSISTENT
                                      LocalVariableBehavior/TRANSIENT))]
