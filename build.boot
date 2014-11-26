@@ -4,7 +4,7 @@
   :src-paths    #{"src"}
   :rsc-paths    #{"resources"})
 
-(def +version+ "0.2.1")
+  (def +version+ "0.3.0-SNAPSHOT")
 
 (task-options!
   pom  [:project 'clj.rb
