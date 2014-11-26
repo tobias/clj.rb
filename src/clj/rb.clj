@@ -24,39 +24,19 @@
   (rb->clj [v]
     "Converts `v` to the appropriate Clojure object"))
 
-(defn raw-eval
-    "Evaluates the `script` String in `rt`, returning the raw result.
-
-  `clojure.core/format` is applied to `script` and `args`.
-
-  Note that the Ruby runtime automatically does some conversion by
-  calling .toJava() on the return value, which will convert scalar
-  types where appropriate, and convert Ruby objects to their JRuby
-  java implementation equivalents."
-  [^ScriptingContainer rt script & args]
-  (.runScriptlet rt (apply format script args)))
-
 (defn eval
   "Evaluates the `script` String in `rt`, applying `rb->clj` to the result.
 
   `clojure.core/format` is applied to `script` and `args`."
-  [rt script & args]
-  (rb->clj (apply raw-eval rt script args)))
-
-(defn raw-eval-file
-  "Evaluates the `file` in `rt`, returning the raw result.
-
-  Note that the Ruby runtime automatically does some conversion by
-  calling .toJava() on the return value, which will convert scalar
-  types where appropriate, and convert Ruby objects to their JRuby
-  java implementation equivalents."
-  [^ScriptingContainer rt ^File file]
-  (.runScriptlet rt (io/reader file) (.getPath file)))
+  [^ScriptingContainer rt script & args]
+  (rb->clj
+    (.runScriptlet rt (apply format script args))))
 
 (defn eval-file
   "Evaluates `file` in `rt`, applying `rb->clj` to the result."
-  [rt file]
-  (rb->clj (raw-eval-file rt file)))
+  [^ScriptingContainer rt ^File file]
+  (rb->clj
+    (.runScriptlet rt (io/reader file) (.getPath file))))
 
 (defn call-method
   "Calls method named `method-name` on IRubyObject `obj`, "
@@ -134,10 +114,12 @@
 (defn runtime
   "Creates a new JRuby runtime.
 
-  * :preserve-locals? [false]
-  * :load-paths [nil]
-  * :env [nil]
-  * :gem-path [nil]"
+  Optionally takes a map of options [default]:
+
+  * :preserve-locals? - any locals defined in an eval will persist, visible to future evals [false]
+  * :load-paths - a sequence of paths to add to the runtime's load path [nil]
+  * :env - a map of values to set in the ruby ENV [nil]
+  * :gem-paths - a sequence of paths to search for gems [nil]"
   ([] (runtime nil))
   ([{:keys [preserve-locals? gem-path load-paths env]}]
      (let [rt (ScriptingContainer. (if preserve-locals?
@@ -145,8 +127,8 @@
                                      LocalVariableBehavior/TRANSIENT))]
        (.setLoadPaths rt (conj load-paths
                            (.toExternalForm (io/resource "clj-ruby-helpers"))))
-       (when-let [path (seq gem-path)]
-         (setenv rt "GEM_PATH" (str/join ":" (map pr-str path))))
+       (when-let [paths (seq gem-paths)]
+         (setenv rt "GEM_PATH" (str/join ":" (map pr-str paths))))
        (doseq [[k v] env]
          (setenv rt k v))
        (require "rubygems")
@@ -154,15 +136,21 @@
 
 
 (defn install-gem
-  "* :install-dir [nil]
-  * :force? [false]
-  * :ignore-dependencies? [false]
-  "
+  "Downloads and installs the gem specificied by `name` and `version`.
+
+  Optionally takes a map of options [default]:
+
+  * :sources - a sequence additional gem sources to add to the default list [nil]
+  * :install-dir - a path to a directory where the gem should be installed. If nil,
+                   the default gem path is used. [nil]
+  * :force? - install the gem, even if it is already installed [false]
+  * :ignore-dependencies? - don't install the gems dependencies [false]"
   ([rt name version]
      (install-gem rt name version nil))
   ([rt name version {:keys [ignore-dependencies? force? sources install-dir]}]
      (let [helper (rb-helper rt)]
-       (if (call-method rt helper "gem_installed?" name version)
+       (if (and (not force?)
+             (call-method rt helper "gem_installed?" name version))
          (println (format "%s v%s already installed, skipping." name version))
          (let [curr-sources (eval rt "Gem.sources")
                installer (call-method rt helper "gem_installer"

@@ -21,7 +21,7 @@
   (.callMethod @rt (rb-helper) "assert" (object-array [exp actual])))
 
 (deftest test-clj->rb
-  (are [clj rb] (assert-in-ruby (clj->rb clj @rt) (raw-eval @rt rb))
+  (are [clj rb] (assert-in-ruby (clj->rb clj @rt) (.runScriptlet @rt rb))
        :foo                ":foo"
        "foo"               "'foo'"
        {:foo :bar}         "{:foo => :bar}"
@@ -33,7 +33,7 @@
        1.0                  "1.0"))
 
 (deftest test-rb->clj
-  (are [rb clj] (= (rb->clj (raw-eval @rt rb)) clj)
+  (are [rb clj] (= (rb->clj (.runScriptlet @rt rb)) clj)
        ":foo"                       :foo
        "'foo'"                      "foo"
        "{:foo => :bar}"             {:foo :bar}
