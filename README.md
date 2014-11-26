@@ -4,14 +4,14 @@
 
 clj.rb is published to [Clojars](https://clojars.org/clj.rb). To use from lein/boot:
 
-    [clj.rb "0.2.0"]
+    [clj.rb "0.2.1"]
 
 From maven:
 
     <depencency>
       <groupId>clj.rb</groupId>
       <artifactId>clj.rb</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.1</version>
     <dependency>
 
 ## Usage
