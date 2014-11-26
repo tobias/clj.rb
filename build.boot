@@ -18,15 +18,17 @@
         :gpg-user-id "toby@tcrawley.org"
         :repo "clojars"])
 
-(deftask build
-  "Build and install the artifact."
-  []
-  (comp (pom) (add-src) (jar) (install)))
-
-(deftask test
+(deftask run-tests
   "Run tests"
   []
   (with-pre-wrap []
     (set-env! :src-paths #(conj % "test"))
     (require 'clojure.test 'clj.rb-test)
-    (eval '(clojure.test/run-tests `clj.rb-test))))
+    (let [{:keys [fail error] :as result} (eval '(clojure.test/run-tests `clj.rb-test))]
+      (when (or (< 0 fail) (< 0 error))
+        (throw (ex-info "Tests failed" result))))))
+
+(deftask build
+  "Build and install the artifact."
+  []
+  (comp (run-tests) (pom) (add-src) (jar) (install)))
