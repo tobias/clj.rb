@@ -8,9 +8,7 @@ class CljRbUtil
     # If running jruby-complete, the first entry is inside the jar, so
     # is read-only
     def first_writeable_gem_path
-      Gem.path.detect do |p|
-        File.writable?(p)
-      end
+      Gem.path.detect { |p| !p.start_with?('file:') && File.writable?(p) }
     end
 
     def add_gem_sources(sources, replace=false)
@@ -31,6 +29,8 @@ class CljRbUtil
     def gem_installed?(name, version)
       Gem::Specification.any? { |g| g.name == name && g.version.to_s == version }
     end
+
+    # Testing utils
 
     def assert(exp, actual)
       ret = exp == actual
