@@ -111,6 +111,22 @@
   [rt key value]
   (eval rt "ENV['%s']='%s'" key value))
 
+(defn setvar
+  "Sets a variable named `var-name` to `value` in `rt`.
+
+  `var-name` can be a local variable (foo), or a global
+  variable ($foo). `value` is passed through clj->rb."
+  [rt var-name value]
+  (.put rt var-name (clj->rb value rt)))
+
+(defn getvar
+  "Retrieves the value held by variable `var-name` in `rt`.
+
+  `var-name` can be a local variable (foo), or a global
+  variable ($foo). The resulting value is passed through rb->clj."
+  [rt var-name]
+  (rb->clj (.get rt var-name)))
+
 (defn runtime
   "Creates a new JRuby runtime.
 

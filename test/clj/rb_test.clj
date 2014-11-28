@@ -65,3 +65,7 @@
 
 (deftest eval-should-coerce-return-value
   (is (= :foo (eval @rt ":foo"))))
+
+(deftest setvar-getvar
+  (setvar @rt "foo" :foo)
+  (is (= :foo (getvar @rt "foo"))))
