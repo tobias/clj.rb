@@ -46,7 +46,7 @@
       method-name (object-array (map #(clj->rb % rt) args)))))
 
 (defn- rb-helper [rt]
-  (eval rt "require 'clj_rb_util';CljRbUtil"))
+  (eval rt "CljRbUtil"))
 
 (defn- ruby-runtime [rt]
   (-> rt .getProvider .getRuntime))
@@ -141,13 +141,13 @@
      (let [rt (ScriptingContainer. (if preserve-locals?
                                      LocalVariableBehavior/PERSISTENT
                                      LocalVariableBehavior/TRANSIENT))]
-       (.setLoadPaths rt (conj load-paths
-                           (.toExternalForm (io/resource "clj-ruby-helpers"))))
+       (.setLoadPaths rt load-paths)
        (when-let [paths (seq gem-paths)]
          (setenv rt "GEM_PATH" (str/join ":" (map pr-str paths))))
        (doseq [[k v] env]
          (setenv rt k v))
-       (require "rubygems")
+       (eval-file rt (-> "clj-ruby-helpers/clj_rb_util.rb" io/resource io/reader))
+       (require rt "rubygems")
        rt)))
 
 
