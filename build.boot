@@ -1,8 +1,8 @@
 (set-env!
-  :dependencies   '[[org.clojure/clojure "1.6.0" :scope "provided"]
-                    [org.jruby/jruby-complete "1.7.16.1"]
-                    [adzerk/bootlaces "0.1.5" :scope "test"]
-                    [adzerk/boot-test "1.0.3" :scope "test"]])
+ :dependencies '[[org.clojure/clojure "1.10.1" :scope "provided"]
+                 [org.jruby/jruby-complete "9.2.14.0" :scope "provided"]
+                 [adzerk/bootlaces "0.2.0" :scope "test"]
+                 [adzerk/boot-test "1.2.0" :scope "test"]])
 
 (require
   '[adzerk.bootlaces :refer :all]
