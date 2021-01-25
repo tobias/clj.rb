@@ -9,6 +9,7 @@
             RubyString
             RubySymbol]
            [org.jruby.embed
+            LocalContextScope
             LocalVariableBehavior
             ScriptingContainer]
            org.jruby.runtime.builtin.IRubyObject
@@ -159,12 +160,22 @@
   * :preserve-locals? - any locals defined in an eval will persist, visible to future evals [false]
   * :load-paths - a sequence of paths to add to the runtime's load path [nil]
   * :env - a map of values to set in the ruby ENV [nil]
-  * :gem-paths - a sequence of paths to search for gems [nil]"
+  * :gem-paths - a sequence of paths to search for gems [nil]
+  * :context-scope - which JRuby embed context to use [:concurrent]
+  * :lazy? - whether to defer to runtime [true]"
   ([] (runtime nil))
-  ([{:keys [preserve-locals? gem-paths load-paths env]}]
-   (let [rt (ScriptingContainer. (if preserve-locals?
-                                   LocalVariableBehavior/PERSISTENT
-                                   LocalVariableBehavior/TRANSIENT))]
+  ([{:keys [preserve-locals? gem-paths load-paths env context-scope lazy?]
+     :or {lazy? true, context-scope :single-thread}}]
+   (let [rt (ScriptingContainer.
+             (case context-scope
+               :single-thread LocalContextScope/SINGLETHREAD
+               :threadsafe LocalContextScope/THREADSAFE
+               :singleton LocalContextScope/SINGLETON
+               :concurrent LocalContextScope/CONCURRENT)
+             (if preserve-locals?
+               LocalVariableBehavior/PERSISTENT
+               LocalVariableBehavior/TRANSIENT)
+             (boolean lazy?))]
      (.setLoadPaths rt (or load-paths []))
      (when-let [paths (seq gem-paths)]
        (setenv rt "GEM_PATH" (str/join ":" (map pr-str paths))))
