@@ -182,7 +182,8 @@
      (doseq [[k v] env]
        (setenv rt k v))
      (require rt "rubygems")
-     (load rt (-> "clj-ruby-helpers/clj_rb_util.rb" io/resource))
+     (when-not (-> rt ruby-runtime (.isClassDefined "CljRbUtil"))
+       (eval rt (-> "clj-ruby-helpers/clj_rb_util.rb" io/resource slurp)))
      rt)))
 
 (defn install-gem
