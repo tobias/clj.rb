@@ -1,6 +1,6 @@
 (ns clj.rb
   "Tools for interacting with JRuby from Clojure."
-  (:refer-clojure :exclude [eval require])
+  (:refer-clojure :exclude [eval require load])
   (:require [clojure.string :as str]
             [clojure.java.io :as io])
   (:import [org.jruby
@@ -12,7 +12,9 @@
             LocalVariableBehavior
             ScriptingContainer]
            org.jruby.runtime.builtin.IRubyObject
-           java.io.File))
+           [java.io
+            File
+            InputStream]))
 
 (defprotocol Clj->Rb
   "A protocol for converting Clojure objects to JRuby implementation equivalents."
@@ -24,6 +26,22 @@
   (rb->clj [v]
     "Converts `v` to the appropriate Clojure object"))
 
+(defprotocol RbLoad
+  (-ruby-load [_ rt]))
+
+(extend-protocol RbLoad
+  File
+  (-ruby-load [file ^ScriptingContainer rt]
+    (.runScriptlet rt (io/reader file) (.getPath file)))
+  InputStream
+  (-ruby-load [is ^ScriptingContainer rt]
+    (.runScriptlet rt is "<ruby stream>"))
+  java.net.URL
+  (-ruby-load [^java.net.URL url ^ScriptingContainer rt]
+    (if (= "file" (.getProtocol url))
+      (-ruby-load (io/as-file url) rt)
+      (-ruby-load (io/input-stream url) rt))))
+
 (defn eval
   "Evaluates the `script` String in `rt`, applying `rb->clj` to the result.
 
@@ -32,11 +50,17 @@
   (rb->clj
     (.runScriptlet rt (apply format script args))))
 
+(defn load
+  "Loads the `script` in `rt`, applying `rb->clj` to the result.
+
+  `script` can be a File or InputStream."
+  [^ScriptingContainer rt script]
+  (rb->clj (-ruby-load script rt)))
+
 (defn eval-file
   "Evaluates `file` in `rt`, applying `rb->clj` to the result."
   [^ScriptingContainer rt ^File file]
-  (rb->clj
-    (.runScriptlet rt (io/reader file) (.getPath file))))
+  (load rt file))
 
 (defn call-method
   "Calls method named `method-name` on IRubyObject `obj`, "
@@ -44,6 +68,11 @@
   (rb->clj
     (.callMethod rt obj
       method-name (object-array (map #(clj->rb % rt) args)))))
+
+(defn require
+  "Requires each of `libs` in `rt`."
+  [rt & libs]
+  (last (map #(eval rt "require '%s'" %) libs)))
 
 (defn- rb-helper [rt]
   (eval rt "CljRbUtil"))
@@ -99,11 +128,6 @@
   (rb->clj [v]
     v))
 
-(defn require
-  "Requires each of `libs` in `rt`."
-  [rt & libs]
-  (last (map #(eval rt "require '%s'" %) libs)))
-
 (defn setenv
   "Sets `value` for `key` in the `ENV` hash in `rt`.
 
@@ -138,18 +162,17 @@
   * :gem-paths - a sequence of paths to search for gems [nil]"
   ([] (runtime nil))
   ([{:keys [preserve-locals? gem-paths load-paths env]}]
-     (let [rt (ScriptingContainer. (if preserve-locals?
-                                     LocalVariableBehavior/PERSISTENT
-                                     LocalVariableBehavior/TRANSIENT))]
-       (.setLoadPaths rt load-paths)
-       (when-let [paths (seq gem-paths)]
-         (setenv rt "GEM_PATH" (str/join ":" (map pr-str paths))))
-       (doseq [[k v] env]
-         (setenv rt k v))
-       (eval-file rt (-> "clj-ruby-helpers/clj_rb_util.rb" io/resource io/reader))
-       (require rt "rubygems")
-       rt)))
-
+   (let [rt (ScriptingContainer. (if preserve-locals?
+                                   LocalVariableBehavior/PERSISTENT
+                                   LocalVariableBehavior/TRANSIENT))]
+     (.setLoadPaths rt (or load-paths []))
+     (when-let [paths (seq gem-paths)]
+       (setenv rt "GEM_PATH" (str/join ":" (map pr-str paths))))
+     (doseq [[k v] env]
+       (setenv rt k v))
+     (require rt "rubygems")
+     (load rt (-> "clj-ruby-helpers/clj_rb_util.rb" io/resource))
+     rt)))
 
 (defn install-gem
   "Downloads and installs the gem specificied by `name` and `version`.
@@ -162,25 +185,25 @@
   * :force? - install the gem, even if it is already installed [false]
   * :ignore-dependencies? - don't install the gems dependencies [false]"
   ([rt name version]
-     (install-gem rt name version nil))
+   (install-gem rt name version nil))
   ([rt name version {:keys [ignore-dependencies? force? sources install-dir]}]
-     (let [helper (rb-helper rt)]
-       (if (and (not force?)
-             (call-method rt helper "gem_installed?" name version))
-         (println (format "%s v%s already installed, skipping." name version))
-         (let [curr-sources (eval rt "Gem.sources")
-               installer (call-method rt helper "gem_installer"
-                           (boolean ignore-dependencies?)
-                           (boolean force?)
-                           (if install-dir
-                             install-dir
-                             (call-method rt helper "first_writeable_gem_path")))]
-           (try
-             (when sources
-               (eval rt helper "add_gem_sources" sources))
-             (call-method rt installer "install" name version)
-             (finally
-               (call-method rt helper "add_gem_sources" curr-sources (boolean :replace)))))))))
+   (let [helper (rb-helper rt)]
+     (if (and (not force?)
+              (call-method rt helper "gem_installed?" name version))
+       (println (format "%s v%s already installed, skipping." name version))
+       (let [curr-sources (eval rt "Gem.sources")
+             installer (call-method rt helper "gem_installer"
+                                    (boolean ignore-dependencies?)
+                                    (boolean force?)
+                                    (if install-dir
+                                      install-dir
+                                      (call-method rt helper "first_writeable_gem_path")))]
+         (try
+           (when sources
+             (call-method rt helper "add_gem_sources" sources))
+           (call-method rt installer "install" name version)
+           (finally
+             (call-method rt helper "add_gem_sources" curr-sources (boolean :replace)))))))))
 
 (defn shutdown-runtime
   "Gracefully shuts down the given JRuby runtime, once all references are free."

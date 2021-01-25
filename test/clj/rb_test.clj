@@ -1,5 +1,5 @@
 (ns clj.rb-test
-  (:refer-clojure :exclude [eval require])
+  (:refer-clojure :exclude [eval require load])
   (:require [clojure.test :refer :all]
             [clj.rb :refer :all]))
 
