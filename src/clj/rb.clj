@@ -127,7 +127,7 @@
   [rt var-name]
   (rb->clj (.get rt var-name)))
 
-(defn runtime
+(defn ^ScriptingContainer runtime
   "Creates a new JRuby runtime.
 
   Optionally takes a map of options [default]:
@@ -183,6 +183,24 @@
                (call-method rt helper "add_gem_sources" curr-sources (boolean :replace)))))))))
 
 (defn shutdown-runtime
-  "Shuts down the given JRuby runtime."
-  [rt]
+  "Gracefully shuts down the given JRuby runtime, once all references are free."
+  [^ScriptingContainer rt]
   (.finalize rt))
+
+(defn terminate-runtime
+  "Shuts down the given JRuby runtime."
+  [^ScriptingContainer rt]
+  (.terminate rt))
+
+(defmacro with-runtime
+  "Convenience wrapper for spinning up a runtime, terminating it at the end.
+  The runtime will be bound as the provided binding within the body
+  opts is a map of options, directly passed to `runtime`"
+  [[binding opts] & body]
+  (assert (symbol? binding) "binding must be a symbol")
+  (assert (or (nil? opts) (map? opts)) "opts must be a map")
+  `(let [~binding (runtime ~opts)]
+     (try
+       ~@body
+       (finally
+         (terminate-runtime ~binding)))))
