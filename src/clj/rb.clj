@@ -56,10 +56,6 @@
   (clj->rb [_ _]
     nil)
 
-  Object
-  (clj->rb [v _]
-    v)
-
   clojure.lang.Keyword
   (clj->rb [v rt]
     (RubySymbol/newSymbol (ruby-runtime rt) (name v)))
@@ -74,13 +70,13 @@
     (reduce
       (fn [h [k v]] (doto h (.put (clj->rb k rt) (clj->rb v rt))))
       (RubyHash. (ruby-runtime rt))
-      v)))
+      v))
+
+  Object
+  (clj->rb [v _]
+    v))
 
 (extend-protocol Rb->Clj
-  Object
-  (rb->clj [v]
-    v)
-
   nil
   (rb->clj [_]
     nil)
@@ -97,7 +93,11 @@
 
   RubySymbol
   (rb->clj [v]
-    (keyword (str v))))
+    (keyword (str v)))
+
+  Object
+  (rb->clj [v]
+    v))
 
 (defn require
   "Requires each of `libs` in `rt`."
